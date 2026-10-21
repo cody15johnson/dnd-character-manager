@@ -234,6 +234,7 @@ function toast(t,r,f){if(S.modal||typeof document==='undefined'||!document.body)
 const scDice=(x,c)=>{const p=pd(x.dice);if(!p||!x.sc||x.lv!==0)return x.dice;const m=1+(c.level>=5)+(c.level>=11)+(c.level>=17);return Math.min(100,p.n*m)+'d'+p.s+(p.k?(p.k>0?'+'+p.k:p.k):'')};
 function doCheck(l,b){const r=d20();pushRoll(l,r.txt+' '+sg(b)+' = '+(r.u+b),r.u===20?'Natural 20!':r.u===1?'Natural 1':'')}
 const wpStats=(i,k)=>{const w=i.wp,m=k.m,ab=w.ab==='best'?(m.dex>m.str?'dex':'str'):w.ab;return{w,md:m[ab]+(w.mb||0),hit:m[ab]+(w.pf?k.p:0)+(w.mb||0)}};
+function wpLine(i,k){const{w,md,hit}=wpStats(i,k),dm=(d,x)=>d?esc(d)+(md?sg(md):'')+' '+(w.dt||'').toLowerCase()+(x||''):'';const ex=w.xd?' + '+esc(w.xd)+' '+(w.xt||'').toLowerCase():'';return`<div style="font-size:.9rem"><b>${sg(hit)}</b> to hit · ${dm(w.d1,ex)||'no dice set'}${w.d2?' · two-handed '+dm(w.d2,ex):''}${w.rg?' · range '+esc(w.rg):''}<div class="mut">${(w.pr||[]).join(', ')}</div><div class="noprint" style="margin-top:4px"><button data-a="atk" data-id="${i.id}">Attack...</button></div></div>`}
 const advTxt=()=>S.adv==='a'?' (advantage)':S.adv==='d'?' (disadvantage)':'';
 function d20(){const a=D(20),b=S.adv==='n'?null:D(20);return{u:b==null?a:S.adv==='a'?Math.max(a,b):Math.min(a,b),txt:'d20 ['+(b==null?a:a+', '+b)+']'+advTxt()}}
 function dmgRoll(p,crit){const n=p.n*(crit?2:1),a=[];for(let i=0;i<n;i++)a.push(D(p.s));return{a,n,sum:a.reduce((x,y)=>x+y,0)+p.k}}
@@ -371,7 +372,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
  const a=el.dataset.a,c=cc(),d=el.dataset;
  const A={new:()=>S.modal={k:'new'},import:()=>S.modal={k:'ex',imp:1,title:'Import characters'},exportAll:()=>S.modal={k:'ex',all:1,file:'dnd-character-roster.json',title:'Export all characters',text:JSON.stringify(exportRoster(S.chars),null,1)},
  exportOne:()=>{const x=S.chars.find(x=>x.id===d.id);if(x)S.modal={k:'ex',file:slug(x.name)+'.json',title:'Export character',text:JSON.stringify(exportCharacter(x),null,1)}},
- open:()=>{S.cur=d.id;S.tab='ov';S.q='';S.cn='';S.nq='';S.nt=[];S.npr=0},del:()=>S.modal={k:'del',id:d.id,name:S.chars.find(x=>x.id===d.id).name},home:()=>{S.cur=null;S.pv=0},prev:()=>{S.pv=1;typeof window!=='undefined'&&window.scrollTo(0,0)},back:()=>S.pv=0,tab:()=>S.tab=d.id,print:()=>{setTimeout(()=>window.print(),50)},ok:()=>{ok();return SKIP},
+ open:()=>{const x=S.chars.find(x=>x.id===d.id);if(!x){alert_('This character is no longer in the roster. Refresh the page and try again.');return SKIP}S.cur=x.id;S.tab='ov';S.pv=0;S.modal=null;S.q='';S.cn='';S.nq='';S.nt=[];S.npr=0},del:()=>S.modal={k:'del',id:d.id,name:S.chars.find(x=>x.id===d.id).name},home:()=>{S.cur=null;S.pv=0},prev:()=>{S.pv=1;typeof window!=='undefined'&&window.scrollTo(0,0)},back:()=>S.pv=0,tab:()=>S.tab=d.id,print:()=>{setTimeout(()=>window.print(),50)},ok:()=>{ok();return SKIP},
  hp:()=>{const h=c.hp,dmg=+d.n<0?-d.n:0;let n=+d.n;if(n<0&&h.tmp){const t=Math.min(h.tmp,-n);h.tmp-=t;n+=t}if(h.cur===0&&n>0)c.ds={s:0,f:0};h.cur=Math.max(0,Math.min(h.max,h.cur+n));S.cn=c.conc&&dmg>0?'Concentration check: CON save DC '+Math.max(10,Math.floor(dmg/2))+' (your save bonus '+sg(calc(c).sv.con)+')':''},dcn:()=>S.cn='',cond:()=>{c.cond[d.n]=c.cond[d.n]?0:1},po:()=>{S.po=el.checked},rest:()=>{c.exh=Math.max(0,c.exh-1);c.hp.cur=c.hp.max;c.hp.tmp=0;c.used={};c.ds={s:0,f:0};{let r=Math.max(1,Math.floor(c.level/2));[...c.classes].sort((a,b)=>b.hd-a.hd).forEach(x=>{const q=Math.min(r,x.hdUsed);x.hdUsed-=q;r-=q})}resetUses(c,['short','long'])},
  ds:()=>{const i=+d.i;c.ds[d.k]=c.ds[d.k]>i?i:i+1},skill:()=>c.sk[d.n]=((c.sk[d.n]||0)+1)%3,
  addItem:()=>S.modal={k:'item'},editItem:()=>S.modal={k:'item',v:c.items.find(i=>i.id===d.id)},delItem:()=>c.items=c.items.filter(i=>i.id!==d.id),eq:()=>{const it=c.items.find(i=>i.id===d.id);it.eq=el.checked?1:0;exclusive(c,it)},
@@ -415,3 +416,4 @@ document.addEventListener('input',e=>{if(e.target.dataset&&e.target.dataset.nq!=
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.modal){if(S.modal.k==='note'&&noteDirty()){capNote();S.modal.dc=1}else S.modal=null;view()}else if(e.key==='Enter'&&e.target&&e.target.id==='m_ntn'){e.preventDefault();const b=document.querySelector('.md [data-a=ntadd]:not([data-t])');if(b&&b.click)b.click()}});
 view();
 </script></body></html>
+
